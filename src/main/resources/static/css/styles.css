@@ -1,0 +1,213 @@
+/* ==========================
+   🌙 MODO OSCURO PERMANENTE
+========================== */
+body.dark-mode {
+  background: #0f1115;
+  color: #e0e0e0;
+}
+
+/* Contenedores */
+body.dark-mode #contenedor-principal {
+  color: #e0e0e0;
+}
+
+body.dark-mode .lado-derecho {
+  background: #1a1c20;
+  border-color: #333;
+  box-shadow: 0 0 15px rgba(0,0,0,0.4);
+}
+
+/* Tableros */
+body.dark-mode #tablero span,
+body.dark-mode #tablero-config span {
+  border-color: #666;
+  box-shadow: 1px 1px 6px rgba(255,255,255,0.1);
+}
+body.dark-mode .camino { background-color: #00a67d; }
+body.dark-mode .vacio { background-color: #181a1f; }
+body.dark-mode .inicio { background-color: #00c795; }
+body.dark-mode .fin { background-color: #ff4b4b; }
+body.dark-mode .robot { background-color: #ffb300; border-color: #ff7043; }
+
+/* Botones */
+body.dark-mode button {
+  background: linear-gradient(135deg, #007bff, #00c6ff);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+}
+body.dark-mode button:hover {
+  background: linear-gradient(135deg, #0099ff, #00e1ff);
+  transform: translateY(-2px);
+}
+
+/* Panel Admin */
+body.dark-mode #admin-panel {
+  background: #15171c;
+  border: 1px solid #2b2b2b;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+body.dark-mode #admin-panel h2,
+body.dark-mode #admin-panel h3 {
+  color: #00c6ff;
+}
+
+/* Tablas */
+body.dark-mode table {
+  background: #1c1f25;
+  color: #ddd;
+  box-shadow: 0 0 10px rgba(0,0,0,0.6);
+}
+body.dark-mode th {
+  background: #007bff;
+}
+body.dark-mode tr:hover {
+  background: #222a35;
+}
+body.dark-mode td {
+  border-color: #333;
+}
+
+/* Bitácora */
+body.dark-mode #bitacora-tab table {
+  background: #181a1f;
+}
+body.dark-mode #bitacora-tab button {
+  background: #ff3d3d;
+}
+
+/* Estadísticas */
+body.dark-mode #estadisticas-metricas p {
+  background: #1b1d23;
+  color: #00ffcc;
+  box-shadow: 0 0 10px rgba(0,255,200,0.1);
+}
+body.dark-mode #grafico-estadisticas {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+/* Login */
+body.dark-mode #login-modal {
+  background: rgba(0,0,0,0.85);
+}
+body.dark-mode .login-content {
+  background: #1e1f26;
+  color: #fff;
+}
+body.dark-mode .login-content input {
+  background: #2a2b32;
+  border: 1px solid #444;
+  color: #fff;
+}
+body.dark-mode .login-content button {
+  background: #007bff;
+}
+
+/* Animaciones sutiles */
+@keyframes fadeInDark {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.robot {
+  background-color: orange;
+  border: 2px solid red;
+  position: relative;
+  box-shadow: 0 0 10px orange;
+}
+
+.robot::after {
+  content: "🤖";
+  font-size: 1.5em;
+  display: block;
+  transform-origin: center;
+}
+
+.orientacion-0::after { transform: rotate(-90deg); } /* Arriba */
+.orientacion-1::after { transform: rotate(0deg); }   /* Derecha */
+.orientacion-2::after { transform: rotate(90deg); }  /* Abajo */
+.orientacion-3::after { transform: rotate(180deg); } /* Izquierda */
+
+.config-container {
+  display: flex;
+  gap: 30px;
+  justify-content: space-between;
+}
+
+.tablero-config-container {
+  flex: 2;
+}
+
+.tablero-config {
+  display: grid;
+  grid-template-columns: repeat(5, 60px);
+  grid-gap: 10px;
+  margin: 10px 0;
+}
+
+.tablero-config span {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 2px solid #333;
+  background-color: #1e1e1e;
+  transition: 0.2s;
+  cursor: pointer;
+}
+
+.tablero-config span.camino {
+  background-color: #00cc88;
+}
+
+.tablero-config span:hover {
+  transform: scale(1.05);
+}
+
+.pistas-guardadas-container {
+  flex: 1;
+  background: #121212;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 15px;
+  color: #fff;
+  overflow-y: auto;
+  max-height: 420px;
+}
+
+.lista-pistas {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.lista-pistas li {
+  background: #1f1f1f;
+  border: 1px solid #333;
+  margin: 6px 0;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.lista-pistas li:hover {
+  background: #00aaff;
+  color: #fff;
+}
+
+.acciones-config button {
+  margin-right: 10px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-guardar { background: #00cc88; color: #fff; }
+.btn-borrar { background: #ff4444; color: #fff; }
+.btn-archivo { background: #ffcc00; color: #111; }
+.btn-exportar { background: #0088ff; color: #fff; }
+

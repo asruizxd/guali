@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Robot en Pista</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* === MODO OSCURO GLOBAL === */
+    body {
+      background-color: #0d1117;
+      color: #f0f6fc;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1, h2, h3, h4 {
+      color: #58a6ff;
+    }
+
+    /* === CONTENEDOR PRINCIPAL === */
+    #contenedor-principal {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 50px;
+      padding: 30px;
+    }
+
+    /* === TABLEROS === */
+    #tablero, .tablero-config {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-template-rows: repeat(5, 60px);
+      gap: 6px;
+      margin: 20px 0;
+      justify-content: center;
+    }
+
+    #tablero span, .tablero-config span {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      border: 2px solid #30363d;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.2em;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .vacio { background-color: #161b22; }
+    .camino { background-color: #2ea043; box-shadow: 0 0 10px #2ea043; }
+    .robot { background-color: #f39c12; box-shadow: 0 0 10px #f39c12; }
+
+    /* === PANEL DE MOVIMIENTOS === */
+    .lado-derecho {
+      flex: 1;
+      background: #161b22;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #30363d;
+      box-shadow: 0 0 15px rgba(88, 166, 255, 0.1);
+      max-width: 400px;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    #lista-movimientos {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 15px;
+      background: #0d1117;
+      border-radius: 10px;
+      padding: 10px;
+      min-height: 100px;
+    }
+
+    #lista-movimientos li {
+      padding: 5px 10px;
+      margin: 4px 0;
+      background: #238636;
+      border-radius: 6px;
+      color: white;
+      text-align: center;
+      font-size: 18px;
+      box-shadow: 0 0 6px #2ea043;
+    }
+
+    #resultado {
+      font-weight: bold;
+      margin-top: 15px;
+      color: #f85149;
+      text-align: center;
+    }
+
+    /* === BOTONES === */
+    button {
+      background: linear-gradient(135deg, #238636, #2ea043);
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      margin: 5px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #2ea043;
+      box-shadow: 0 0 10px #2ea043;
+      transform: translateY(-2px);
+    }
+
+    #btn-admin {
+      background: linear-gradient(135deg, #f39c12, #f1c40f);
+    }
+
+    #btn-admin:hover {
+      box-shadow: 0 0 10px #f1c40f;
+    }
+
+    /* === LOGIN MODAL === */
+    #login-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .login-content {
+      background: #161b22;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
+      text-align: center;
+      width: 300px;
+    }
+
+    .login-content input {
+      display: block;
+      width: 90%;
+      margin: 10px auto;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      background: #0d1117;
+      color: #f0f6fc;
+    }
+
+    /* === PANEL DE ADMINISTRACIÓN === */
+    #admin-panel {
+      background: #161b22;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 30px auto;
+      max-width: 1000px;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: #0d1117;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(88, 166, 255, 0.2);
+    }
+
+    th, td {
+      border: 1px solid #30363d;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #161b22;
+      color: #58a6ff;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) { background-color: #1c2128; }
+    tr:hover { background-color: #21262d; }
+
+    /* === PANEL CONFIGURACIÓN DE PISTA === */
+    .config-container {
+      display: flex;
+      gap: 30px;
+      justify-content: space-between;
+      margin: 30px auto;
+      max-width: 1000px;
+    }
+
+    .tablero-config-container { flex: 2; }
+
+    .pistas-guardadas-container {
+      flex: 1;
+      background: #121212;
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      color: #fff;
+      overflow-y: auto;
+      max-height: 420px;
+    }
+
+    .lista-pistas {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .lista-pistas li {
+      background: #1f1f1f;
+      border: 1px solid #333;
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .lista-pistas li:hover {
+      background: #00aaff;
+      color: #fff;
+    }
+
+    /* === ANIMACIÓN === */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body class="dark-mode">
+  <div id="contenedor-principal">
+    <!-- LADO IZQUIERDO: TABLERO -->
+    <div class="lado-izquierdo">
+      <h1>Tablero Inicial</h1>
+      <div id="tablero"></div>
+      <div class="botones-tablero">
+        <button onclick="abrirLogin()">Configurar</button>
+        <button onclick="reiniciar()">Reiniciar</button>
+        <button id="btn-admin" onclick="abrirAdminPanel()" style="display:none;">Administración</button>
+      </div>
+    </div>
+
+    <!-- LADO DERECHO: MOVIMIENTOS -->
+    <div class="lado-derecho">
+      <h2>Movimientos</h2>
+      <div class="botones-movimientos">
+        <button onclick="agregarMovimiento('Adelante')">Adelante</button>
+        <button onclick="agregarMovimiento('Izquierda')">Girar Izquierda</button>
+        <button onclick="agregarMovimiento('Derecha')">Girar Derecha</button>
+        <button onclick="agregarMovimiento('Bucle')">Bucle</button>
+        <button onclick="ejecutar()">Ejecutar</button>
+      </div>
+
+      <h2>Lista de Movimientos</h2>
+      <ul id="lista-movimientos"></ul>
+      <p id="resultado"></p>
+    </div>
+  </div>
+
+  <!-- PANEL CONFIGURACIÓN DE PISTA -->
+  <div id="panel-configuracion" class="panel" style="display:none;">
+    <h2>⚙️ Configurar Pista</h2>
+
+    <div class="config-container">
+      <div class="tablero-config-container">
+        <p>Haz clic sobre los cuadros que conformarán la pista:</p>
+        <div id="tablero-config" class="tablero-config"></div>
+
+        <div class="acciones-config">
+          <button class="btn-guardar" onclick="guardarPista()">💾 Guardar</button>
+          <button class="btn-borrar" onclick="borrarPista()">🗑️ Borrar</button>
+          <button class="btn-archivo" onclick="cargarDesdeArchivo()">📂 Cargar desde Archivo</button>
+          <button class="btn-exportar" onclick="exportarPista()">⬇️ Exportar hacia Archivo</button>
+        </div>
+      </div>
+
+      <div class="pistas-guardadas-container">
+        <h3>📜 Pistas Guardadas</h3>
+        <ul id="lista-pistas-guardadas" class="lista-pistas"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGIN MODAL -->
+  <div id="login-modal">
+    <div class="login-content">
+      <h2>Login Administrador</h2>
+      <input type="text" id="login-username" placeholder="Usuario">
+      <input type="password" id="login-password" placeholder="Contraseña">
+      <button onclick="login()">Ingresar</button>
+      <button onclick="cerrarLogin()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- PANEL ADMINISTRACIÓN -->
+  <div id="admin-panel" style="display:none;">
+    <h2>Panel de Administración</h2>
+    <div class="admin-tabs">
+      <button onclick="mostrarTab('usuarios')">Usuarios</button>
+      <button onclick="mostrarTab('bitacora')">Bitácora</button>
+      <button onclick="mostrarTab('estadisticas')">Estadísticas</button>
+    </div>
+
+    <!-- Usuarios -->
+    <div id="usuarios-tab">
+      <h3>Gestión de Administradores</h3>
+      <div id="admin-form">
+        <input type="hidden" id="user-id">
+        <input type="text" id="username-admin" placeholder="Usuario">
+        <input type="email" id="email-admin" placeholder="Email">
+        <input type="password" id="password-admin" placeholder="Contraseña">
+        <button onclick="guardarUsuario()">Guardar</button>
+        <button id="cancel-btn" onclick="cancelarEdicion()" style="display:none;">Cancelar</button>
+      </div>
+      <table id="tabla-usuarios">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Email</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Bitácora -->
+    <div id="bitacora-tab" style="display:none;">
+      <h3>Histórico de Acciones</h3>
+      <table id="tabla-bitacora">
+        <thead>
+          <tr>
+            <th>Fecha / Hora</th>
+            <th>Administrador</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- Estadísticas -->
+    <div id="estadisticas-tab" style="display:none;">
+      <h3>Estadísticas del Sistema</h3>
+      <div id="estadisticas-metricas">
+        <p>Visitas totales: <span id="visitas">0</span></p>
+        <p>Éxitos: <span id="exitos">0</span></p>
+        <p>Fallos: <span id="fallos">0</span></p>
+      </div>
+      <canvas id="grafico-estadisticas" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
