@@ -236,6 +236,20 @@ async function ejecutar() {
   }, 700);
 }
 
+// ==========================
+// BITÁCORA
+// ==========================
+async function registrarAccion(usuario, accion) {
+  try {
+    await fetch(`${API_BASE_URL}/bitacora`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, accion }),
+    });
+  } catch (err) {
+    console.error("Error al registrar en bitácora:", err);
+  }
+}
 
 // ==========================
 // BITÁCORA
