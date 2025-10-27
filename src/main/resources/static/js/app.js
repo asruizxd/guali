@@ -10,8 +10,8 @@ let posRobot = { fila: 0, col: 0 };
 let posicionesVisitadas = [];
 let inicio = null;
 let fin = null;
-let grafico = null;
-let orientacion = 1; // 0=arriba, 1=derecha, 2=abajo, 3=izquierda
+let orientacion = 1;
+let intervaloEstadisticas = null;
 
 // ==========================
 // LOGIN
@@ -74,14 +74,18 @@ async function cargarPista() {
     const pistas = await res.json();
 
     if (!pistas || pistas.length === 0) {
+      console.warn("No hay pistas disponibles, se cargará una vacía.");
       tablero = Array.from({ length: 5 }, () => Array(5).fill(0));
       tablero[0][0] = 1;
       tablero[4][4] = 1;
     } else {
       const pistaAleatoria = pistas[Math.floor(Math.random() * pistas.length)];
       console.log("🎲 Pista aleatoria seleccionada:", pistaAleatoria.nombre);
+
       const jsonData = pistaAleatoria.tableroJson?.replace(/^'|'$/g, "");
       tablero = JSON.parse(jsonData || pistaAleatoria.tablero || "[]");
+
+      await registrarAccion("sistema", "Se cargó la pista: " + pistaAleatoria.nombre);
     }
 
     inicio = encontrarInicio(tablero);
@@ -130,36 +134,24 @@ function renderTablero(tablero, posRobot, orientacion) {
   }
 }
 
-function reiniciar() {
-  cargarPista();
+// ==========================
+// REGISTRO EN BITÁCORA
+// ==========================
+async function registrarAccion(usuario, accion) {
+  try {
+    await fetch(`${API_BASE_URL}/bitacora`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, accion }),
+    });
+  } catch (err) {
+    console.error("Error al registrar en bitácora:", err);
+  }
 }
 
 // ==========================
-// MOVIMIENTOS
+// MOVIMIENTOS Y EJECUCIÓN
 // ==========================
-function agregarMovimiento(mov) {
-  movimientos.push(mov);
-  const lista = document.getElementById("lista-movimientos");
-  lista.innerHTML = movimientos.map((m) => `<li>${m}</li>`).join("");
-}
-
-function moverAdelante() {
-  let nuevaFila = posRobot.fila;
-  let nuevaCol = posRobot.col;
-  if (orientacion === 0) nuevaFila--;
-  if (orientacion === 1) nuevaCol++;
-  if (orientacion === 2) nuevaFila++;
-  if (orientacion === 3) nuevaCol--;
-  if (
-    nuevaFila < 0 ||
-    nuevaFila >= tablero.length ||
-    nuevaCol < 0 ||
-    nuevaCol >= tablero[0].length
-  )
-    return;
-  posRobot = { fila: nuevaFila, col: nuevaCol };
-}
-
 async function ejecutar() {
   if (movimientos.length === 0) {
     document.getElementById("resultado").textContent =
@@ -168,24 +160,21 @@ async function ejecutar() {
   }
 
   let i = 0;
-  const usuario = "sistema"; // o podrías reemplazar por el nombre del admin logueado
-
   const intervalo = setInterval(async () => {
     if (i >= movimientos.length) {
       clearInterval(intervalo);
 
-      // ✅ Validar resultado final
+      // Verificar si el robot llegó al final
       let resultado = "";
       if (posRobot.fila === fin.fila && posRobot.col === fin.col) {
-        resultado = "✅ Ejecución completada con éxito";
+        resultado = "✅ Misión completada con éxito";
       } else {
-        resultado = "⚠️ Ejecución incompleta (no llegó al destino)";
+        resultado = "⚠️ Misión fallida (no llegó al destino)";
       }
 
       document.getElementById("resultado").textContent = resultado;
-
-      // 🧾 Registrar en bitácora
-      await registrarAccion(usuario, resultado);
+      await registrarAccion("admin", resultado);
+      await cargarEstadisticas();
       return;
     }
 
@@ -214,80 +203,26 @@ async function ejecutar() {
         break;
     }
 
-    // 🚨 Validar límites y camino
+    // Verificar límites
     if (
       nuevaFila < 0 ||
       nuevaFila >= tablero.length ||
       nuevaCol < 0 ||
-      nuevaCol >= tablero[0].length ||
-      tablero[nuevaFila][nuevaCol] !== 1
+      nuevaCol >= tablero[0].length
     ) {
       clearInterval(intervalo);
-      const msg = "❌ El robot salió del camino";
+      const msg = "❌ Error: el robot salió del camino (misión fallida)";
       document.getElementById("resultado").textContent = msg;
-      await registrarAccion(usuario, msg);
+      await registrarAccion("admin", msg);
+      await cargarEstadisticas();
       return;
     }
 
-    // Actualizar posición y renderizar
     posRobot = { fila: nuevaFila, col: nuevaCol };
+    posicionesVisitadas.push(JSON.stringify(posRobot));
     renderTablero(tablero, posRobot, orientacion);
     i++;
   }, 700);
-}
-
-// ==========================
-// BITÁCORA
-// ==========================
-async function registrarAccion(usuario, accion) {
-  try {
-    await fetch(`${API_BASE_URL}/bitacora`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuario, accion }),
-    });
-  } catch (err) {
-    console.error("Error al registrar en bitácora:", err);
-  }
-}
-
-// ==========================
-// BITÁCORA
-// ==========================
-async function cargarBitacora() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/bitacora`);
-    const bitacora = await res.json();
-    const tbody = document.querySelector("#tabla-bitacora tbody");
-    tbody.innerHTML = "";
-    if (!bitacora || bitacora.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='3'>Sin registros</td></tr>";
-      return;
-    }
-    bitacora.forEach((r) => {
-      const tr = document.createElement("tr");
-      const fecha = new Date(r.fechaHora).toLocaleString();
-      tr.innerHTML = `<td>${fecha}</td><td>${r.usuario}</td><td>${r.accion}</td>`;
-      tbody.appendChild(tr);
-    });
-  } catch (err) {
-    console.error("Error al cargar bitácora:", err);
-  }
-}
-
-// ==========================
-// ESTADÍSTICAS
-// ==========================
-async function cargarEstadisticas() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/estadisticas`);
-    const stats = await res.json();
-    document.getElementById("visitas").textContent = stats.total || 0;
-    document.getElementById("exitos").textContent = stats.exitos || 0;
-    document.getElementById("fallos").textContent = stats.fallos || 0;
-  } catch (err) {
-    console.error("Error al cargar estadísticas:", err);
-  }
 }
 
 // ==========================
@@ -298,13 +233,13 @@ function renderTableroConfig() {
   div.innerHTML = "";
   tableroConfig.forEach((fila, i) => {
     fila.forEach((celda, j) => {
-      const span = document.createElement("span");
-      span.className = celda === 1 ? "camino" : "vacio";
-      span.onclick = () => {
+      const cell = document.createElement("span");
+      cell.className = celda === 1 ? "camino" : "vacio";
+      cell.onclick = () => {
         tableroConfig[i][j] = tableroConfig[i][j] === 1 ? 0 : 1;
         renderTableroConfig();
       };
-      div.appendChild(span);
+      div.appendChild(cell);
     });
   });
 }
@@ -333,10 +268,12 @@ async function cargarPistasGuardadas() {
     const pistas = await res.json();
     const lista = document.getElementById("lista-pistas-guardadas");
     lista.innerHTML = "";
+
     if (!pistas.length) {
       lista.innerHTML = "<li style='opacity:0.7;'>Sin pistas guardadas</li>";
       return;
     }
+
     pistas.forEach((p) => {
       const li = document.createElement("li");
       li.textContent = p.nombre;
@@ -375,102 +312,25 @@ function abrirConfiguracionReal() {
 }
 
 // ==========================
-// CRUD ADMINISTRADORES
+// ESTADÍSTICAS EN TIEMPO REAL
 // ==========================
-async function cargarUsuarios() {
+async function cargarEstadisticas() {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/list`);
-    const usuarios = await res.json();
-    const tbody = document.querySelector("#tabla-usuarios tbody");
-    tbody.innerHTML = "";
-    usuarios.forEach((u) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${u.id}</td>
-        <td>${u.username}</td>
-        <td>${u.email}</td>
-        <td>
-          <button onclick="editarUsuario(${u.id})">✏️</button>
-          <button onclick="eliminarUsuario(${u.id})">🗑️</button>
-        </td>`;
-      tbody.appendChild(tr);
-    });
+    const res = await fetch(`${API_BASE_URL}/estadisticas`);
+    const stats = await res.json();
+    document.getElementById("visitas").textContent = stats.total || 0;
+    document.getElementById("exitos").textContent = stats.exitos || 0;
+    document.getElementById("fallos").textContent = stats.fallos || 0;
   } catch (err) {
-    console.error("Error al cargar usuarios:", err);
+    console.error("Error al cargar estadísticas:", err);
   }
 }
 
-async function guardarUsuario() {
-  const id = document.getElementById("user-id").value;
-  const username = document.getElementById("username-admin").value;
-  const email = document.getElementById("email-admin").value;
-  const password = document.getElementById("password-admin").value;
-
-  if (!username || !email || !password)
-    return alert("Completa todos los campos");
-
-  const method = id ? "PUT" : "POST";
-  const url = id
-    ? `${API_BASE_URL}/admin/users/${id}`
-    : `${API_BASE_URL}/admin/register`;
-
-  try {
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, password }),
-    });
-
-    if (!res.ok) throw new Error("Error al guardar usuario");
-
-    alert(id ? "Usuario actualizado correctamente" : "Usuario registrado");
-    await cargarUsuarios();
-    cancelarEdicion();
-  } catch (err) {
-    console.error(err);
-    alert("❌ Error al guardar usuario");
-  }
-}
-
-async function editarUsuario(id) {
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/list`);
-    const usuarios = await res.json();
-    const user = usuarios.find((u) => u.id === id);
-    if (!user) return alert("Usuario no encontrado");
-
-    document.getElementById("user-id").value = user.id;
-    document.getElementById("username-admin").value = user.username;
-    document.getElementById("email-admin").value = user.email;
-    document.getElementById("password-admin").value = "";
-    document.getElementById("cancel-btn").style.display = "inline-block";
-  } catch (err) {
-    console.error(err);
-    alert("Error al cargar datos del usuario");
-  }
-}
-
-async function eliminarUsuario(id) {
-  if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
-      method: "DELETE",
-    });
-    if (!res.ok) throw new Error("Error al eliminar usuario");
-    alert("Usuario eliminado correctamente");
-    await cargarUsuarios();
-  } catch (err) {
-    console.error(err);
-    alert("❌ Error al eliminar usuario");
-  }
-}
-
-function cancelarEdicion() {
-  document.getElementById("user-id").value = "";
-  document.getElementById("username-admin").value = "";
-  document.getElementById("email-admin").value = "";
-  document.getElementById("password-admin").value = "";
-  document.getElementById("cancel-btn").style.display = "none";
+// 🔄 Actualización automática cada 5 segundos
+function iniciarActualizacionEstadisticas() {
+  if (intervaloEstadisticas) clearInterval(intervaloEstadisticas);
+  cargarEstadisticas();
+  intervaloEstadisticas = setInterval(cargarEstadisticas, 5000);
 }
 
 // ==========================
@@ -479,5 +339,5 @@ function cancelarEdicion() {
 window.addEventListener("load", () => {
   document.body.classList.add("dark-mode");
   cargarPista();
-  cargarEstadisticas();
+  iniciarActualizacionEstadisticas();
 });
