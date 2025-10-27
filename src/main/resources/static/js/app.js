@@ -160,7 +160,7 @@ function moverAdelante() {
   posRobot = { fila: nuevaFila, col: nuevaCol };
 }
 
-function ejecutar() {
+async function ejecutar() {
   if (movimientos.length === 0) {
     document.getElementById("resultado").textContent =
       "⚠️ Agrega movimientos primero";
@@ -168,17 +168,37 @@ function ejecutar() {
   }
 
   let i = 0;
-  const intervalo = setInterval(() => {
+  const usuario = "sistema"; // o podrías reemplazar por el nombre del admin logueado
+
+  const intervalo = setInterval(async () => {
     if (i >= movimientos.length) {
       clearInterval(intervalo);
-      document.getElementById("resultado").textContent = "✅ Ejecución completa";
+
+      // ✅ Validar resultado final
+      let resultado = "";
+      if (posRobot.fila === fin.fila && posRobot.col === fin.col) {
+        resultado = "✅ Ejecución completada con éxito";
+      } else {
+        resultado = "⚠️ Ejecución incompleta (no llegó al destino)";
+      }
+
+      document.getElementById("resultado").textContent = resultado;
+
+      // 🧾 Registrar en bitácora
+      await registrarAccion(usuario, resultado);
       return;
     }
 
     const mov = movimientos[i];
+    let nuevaFila = posRobot.fila;
+    let nuevaCol = posRobot.col;
+
     switch (mov) {
       case "Adelante":
-        moverAdelante();
+        if (orientacion === 0) nuevaFila--;
+        if (orientacion === 1) nuevaCol++;
+        if (orientacion === 2) nuevaFila++;
+        if (orientacion === 3) nuevaCol--;
         break;
       case "Izquierda":
         orientacion = (orientacion + 3) % 4;
@@ -187,14 +207,35 @@ function ejecutar() {
         orientacion = (orientacion + 1) % 4;
         break;
       case "Bucle":
-        moverAdelante();
-        moverAdelante();
+        if (orientacion === 0) nuevaFila -= 2;
+        if (orientacion === 1) nuevaCol += 2;
+        if (orientacion === 2) nuevaFila += 2;
+        if (orientacion === 3) nuevaCol -= 2;
         break;
     }
+
+    // 🚨 Validar límites y camino
+    if (
+      nuevaFila < 0 ||
+      nuevaFila >= tablero.length ||
+      nuevaCol < 0 ||
+      nuevaCol >= tablero[0].length ||
+      tablero[nuevaFila][nuevaCol] !== 1
+    ) {
+      clearInterval(intervalo);
+      const msg = "❌ El robot salió del camino";
+      document.getElementById("resultado").textContent = msg;
+      await registrarAccion(usuario, msg);
+      return;
+    }
+
+    // Actualizar posición y renderizar
+    posRobot = { fila: nuevaFila, col: nuevaCol };
     renderTablero(tablero, posRobot, orientacion);
     i++;
   }, 700);
 }
+
 
 // ==========================
 // BITÁCORA
