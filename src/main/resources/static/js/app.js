@@ -74,18 +74,14 @@ async function cargarPista() {
     const pistas = await res.json();
 
     if (!pistas || pistas.length === 0) {
-      console.warn("No hay pistas disponibles, se cargará una vacía.");
       tablero = Array.from({ length: 5 }, () => Array(5).fill(0));
       tablero[0][0] = 1;
       tablero[4][4] = 1;
     } else {
       const pistaAleatoria = pistas[Math.floor(Math.random() * pistas.length)];
       console.log("🎲 Pista aleatoria seleccionada:", pistaAleatoria.nombre);
-
       const jsonData = pistaAleatoria.tableroJson?.replace(/^'|'$/g, "");
       tablero = JSON.parse(jsonData || pistaAleatoria.tablero || "[]");
-
-      registrarAccion("sistema", "Se cargó la pista: " + pistaAleatoria.nombre);
     }
 
     inicio = encontrarInicio(tablero);
@@ -134,18 +130,108 @@ function renderTablero(tablero, posRobot, orientacion) {
   }
 }
 
+function reiniciar() {
+  cargarPista();
+}
+
+// ==========================
+// MOVIMIENTOS
+// ==========================
+function agregarMovimiento(mov) {
+  movimientos.push(mov);
+  const lista = document.getElementById("lista-movimientos");
+  lista.innerHTML = movimientos.map((m) => `<li>${m}</li>`).join("");
+}
+
+function moverAdelante() {
+  let nuevaFila = posRobot.fila;
+  let nuevaCol = posRobot.col;
+  if (orientacion === 0) nuevaFila--;
+  if (orientacion === 1) nuevaCol++;
+  if (orientacion === 2) nuevaFila++;
+  if (orientacion === 3) nuevaCol--;
+  if (
+    nuevaFila < 0 ||
+    nuevaFila >= tablero.length ||
+    nuevaCol < 0 ||
+    nuevaCol >= tablero[0].length
+  )
+    return;
+  posRobot = { fila: nuevaFila, col: nuevaCol };
+}
+
+function ejecutar() {
+  if (movimientos.length === 0) {
+    document.getElementById("resultado").textContent =
+      "⚠️ Agrega movimientos primero";
+    return;
+  }
+
+  let i = 0;
+  const intervalo = setInterval(() => {
+    if (i >= movimientos.length) {
+      clearInterval(intervalo);
+      document.getElementById("resultado").textContent = "✅ Ejecución completa";
+      return;
+    }
+
+    const mov = movimientos[i];
+    switch (mov) {
+      case "Adelante":
+        moverAdelante();
+        break;
+      case "Izquierda":
+        orientacion = (orientacion + 3) % 4;
+        break;
+      case "Derecha":
+        orientacion = (orientacion + 1) % 4;
+        break;
+      case "Bucle":
+        moverAdelante();
+        moverAdelante();
+        break;
+    }
+    renderTablero(tablero, posRobot, orientacion);
+    i++;
+  }, 700);
+}
+
 // ==========================
 // BITÁCORA
 // ==========================
-async function registrarAccion(usuario, accion) {
+async function cargarBitacora() {
   try {
-    await fetch(`${API_BASE_URL}/bitacora`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuario, accion }),
+    const res = await fetch(`${API_BASE_URL}/bitacora`);
+    const bitacora = await res.json();
+    const tbody = document.querySelector("#tabla-bitacora tbody");
+    tbody.innerHTML = "";
+    if (!bitacora || bitacora.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='3'>Sin registros</td></tr>";
+      return;
+    }
+    bitacora.forEach((r) => {
+      const tr = document.createElement("tr");
+      const fecha = new Date(r.fechaHora).toLocaleString();
+      tr.innerHTML = `<td>${fecha}</td><td>${r.usuario}</td><td>${r.accion}</td>`;
+      tbody.appendChild(tr);
     });
   } catch (err) {
-    console.error("Error al registrar en bitácora:", err);
+    console.error("Error al cargar bitácora:", err);
+  }
+}
+
+// ==========================
+// ESTADÍSTICAS
+// ==========================
+async function cargarEstadisticas() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/estadisticas`);
+    const stats = await res.json();
+    document.getElementById("visitas").textContent = stats.total || 0;
+    document.getElementById("exitos").textContent = stats.exitos || 0;
+    document.getElementById("fallos").textContent = stats.fallos || 0;
+  } catch (err) {
+    console.error("Error al cargar estadísticas:", err);
   }
 }
 
@@ -157,13 +243,13 @@ function renderTableroConfig() {
   div.innerHTML = "";
   tableroConfig.forEach((fila, i) => {
     fila.forEach((celda, j) => {
-      const cell = document.createElement("span");
-      cell.className = celda === 1 ? "camino" : "vacio";
-      cell.onclick = () => {
+      const span = document.createElement("span");
+      span.className = celda === 1 ? "camino" : "vacio";
+      span.onclick = () => {
         tableroConfig[i][j] = tableroConfig[i][j] === 1 ? 0 : 1;
         renderTableroConfig();
       };
-      div.appendChild(cell);
+      div.appendChild(span);
     });
   });
 }
@@ -192,12 +278,10 @@ async function cargarPistasGuardadas() {
     const pistas = await res.json();
     const lista = document.getElementById("lista-pistas-guardadas");
     lista.innerHTML = "";
-
     if (!pistas.length) {
       lista.innerHTML = "<li style='opacity:0.7;'>Sin pistas guardadas</li>";
       return;
     }
-
     pistas.forEach((p) => {
       const li = document.createElement("li");
       li.textContent = p.nombre;
@@ -238,6 +322,29 @@ function abrirConfiguracionReal() {
 // ==========================
 // CRUD ADMINISTRADORES
 // ==========================
+async function cargarUsuarios() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/list`);
+    const usuarios = await res.json();
+    const tbody = document.querySelector("#tabla-usuarios tbody");
+    tbody.innerHTML = "";
+    usuarios.forEach((u) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${u.id}</td>
+        <td>${u.username}</td>
+        <td>${u.email}</td>
+        <td>
+          <button onclick="editarUsuario(${u.id})">✏️</button>
+          <button onclick="eliminarUsuario(${u.id})">🗑️</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error("Error al cargar usuarios:", err);
+  }
+}
+
 async function guardarUsuario() {
   const id = document.getElementById("user-id").value;
   const username = document.getElementById("username-admin").value;
