@@ -66,7 +66,7 @@ function mostrarTab(tabName) {
 }
 
 // ==========================
-// TABLERO PRINCIPAL (Pista aleatoria)
+// TABLERO PRINCIPAL
 // ==========================
 async function cargarPista() {
   try {
@@ -141,7 +141,84 @@ function renderTablero(tablero, posRobot, orientacion) {
 }
 
 // ==========================
-// REGISTRO EN BITÁCORA
+// MOVIMIENTOS
+// ==========================
+function agregarMovimiento(mov) {
+  movimientos.push(mov);
+  const lista = document.getElementById("lista-movimientos");
+  lista.innerHTML = movimientos
+    .map((m) => {
+      if (m === "Adelante") return "<li>⬆️</li>";
+      if (m === "Izquierda") return "<li>⬅️</li>";
+      if (m === "Derecha") return "<li>➡️</li>";
+      if (m === "Bucle") return "<li>🔁</li>";
+    })
+    .join("");
+}
+
+function ejecutar() {
+  if (movimientos.length === 0) {
+    document.getElementById("resultado").textContent =
+      "⚠️ Agrega movimientos primero";
+    return;
+  }
+
+  let i = 0;
+  const intervalo = setInterval(() => {
+    if (i >= movimientos.length) {
+      clearInterval(intervalo);
+      document.getElementById("resultado").textContent =
+        "✅ Misión completada";
+      return;
+    }
+
+    const mov = movimientos[i];
+    switch (mov) {
+      case "Adelante":
+        moverAdelante();
+        break;
+      case "Izquierda":
+        orientacion = (orientacion + 3) % 4;
+        break;
+      case "Derecha":
+        orientacion = (orientacion + 1) % 4;
+        break;
+      case "Bucle":
+        moverAdelante();
+        moverAdelante();
+        break;
+    }
+
+    renderTablero(tablero, posRobot, orientacion);
+    i++;
+  }, 700);
+}
+
+function moverAdelante() {
+  let nuevaFila = posRobot.fila;
+  let nuevaCol = posRobot.col;
+  if (orientacion === 0) nuevaFila--;
+  if (orientacion === 1) nuevaCol++;
+  if (orientacion === 2) nuevaFila++;
+  if (orientacion === 3) nuevaCol--;
+
+  if (
+    nuevaFila < 0 ||
+    nuevaFila >= tablero.length ||
+    nuevaCol < 0 ||
+    nuevaCol >= tablero[0].length
+  ) {
+    document.getElementById("resultado").textContent =
+      "❌ Robot fuera del tablero";
+    return;
+  }
+
+  posRobot = { fila: nuevaFila, col: nuevaCol };
+  renderTablero(tablero, posRobot, orientacion);
+}
+
+// ==========================
+// BITÁCORA
 // ==========================
 async function registrarAccion(usuario, accion) {
   try {
@@ -233,7 +310,7 @@ async function cargarUsuarios() {
 }
 
 // ==========================
-// BITÁCORA
+// BITÁCORA Y ESTADÍSTICAS
 // ==========================
 async function cargarBitacora() {
   try {
@@ -262,28 +339,21 @@ async function cargarBitacora() {
   }
 }
 
-// ==========================
-// ESTADÍSTICAS
-// ==========================
 async function cargarEstadisticas() {
   try {
     const res = await fetch(`${API_BASE_URL}/estadisticas`);
     const stats = await res.json();
 
-    const total = stats.total || 0;
-    const exitos = stats.exitos || 0;
-    const fallos = stats.fallos || 0;
-
-    document.getElementById("visitas").textContent = total;
-    document.getElementById("exitos").textContent = exitos;
-    document.getElementById("fallos").textContent = fallos;
+    document.getElementById("visitas").textContent = stats.total || 0;
+    document.getElementById("exitos").textContent = stats.exitos || 0;
+    document.getElementById("fallos").textContent = stats.fallos || 0;
   } catch (err) {
     console.error("Error al cargar estadísticas:", err);
   }
 }
 
 // ==========================
-// PISTAS GUARDADAS (ADMIN)
+// PISTAS GUARDADAS
 // ==========================
 async function cargarPistasGuardadas() {
   try {
@@ -319,6 +389,45 @@ async function cargarPistaGuardada(id) {
     console.error("Error al cargar pista seleccionada:", err);
   }
 }
+
+// ==========================
+// EXPONER FUNCIONES AL HTML
+// ==========================
+window.agregarMovimiento = agregarMovimiento;
+window.ejecutar = ejecutar;
+window.reiniciar = reiniciar;
+window.abrirLogin = abrirLogin;
+window.login = login;
+window.cerrarLogin = cerrarLogin;
+window.abrirAdminPanel = abrirAdminPanel;
+window.guardarPista = guardarPista;
+window.borrarPista = () => {
+  tableroConfig = Array.from({ length: 5 }, () => Array(5).fill(0));
+  renderTableroConfig();
+};
+window.exportarPista = () => {
+  const data = JSON.stringify(tableroConfig, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "pista.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+window.cargarDesdeArchivo = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json";
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    tableroConfig = JSON.parse(text);
+    renderTableroConfig();
+  };
+  input.click();
+};
 
 // ==========================
 // INICIO
