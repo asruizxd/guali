@@ -356,7 +356,7 @@ async function guardarUsuario() {
 
   const method = id ? "PUT" : "POST";
   const url = id
-    ? `${API_BASE_URL}/admin/update/${id}`
+    ? `${API_BASE_URL}/admin/users/${id}`
     : `${API_BASE_URL}/admin/register`;
 
   try {
@@ -379,8 +379,10 @@ async function guardarUsuario() {
 
 async function editarUsuario(id) {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/${id}`);
-    const user = await res.json();
+    const res = await fetch(`${API_BASE_URL}/admin/list`);
+    const usuarios = await res.json();
+    const user = usuarios.find((u) => u.id === id);
+    if (!user) return alert("Usuario no encontrado");
 
     document.getElementById("user-id").value = user.id;
     document.getElementById("username-admin").value = user.username;
@@ -396,7 +398,9 @@ async function editarUsuario(id) {
 async function eliminarUsuario(id) {
   if (!confirm("¿Seguro que deseas eliminar este usuario?")) return;
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
+      method: "DELETE",
+    });
     if (!res.ok) throw new Error("Error al eliminar usuario");
     alert("Usuario eliminado correctamente");
     await cargarUsuarios();
